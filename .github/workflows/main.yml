@@ -35,3 +35,33 @@ jobs:
           name: FCNPC-Windows
           path: build/lib/Release/*.dll
           if-no-files-found: error
+
+  build-linux:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-multilib
+
+      - name: Configure CMake
+        run: cmake -S . -B build-linux "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build FCNPC
+        run: cmake --build build-linux --parallel 4
+
+      - name: Find built libraries
+        run: find build-linux -type f -name "*.so" -print
+
+      - name: Upload SO
+        uses: actions/upload-artifact@v4
+        with:
+          name: FCNPC-Linux
+          path: build-linux/**/*.so
+          if-no-files-found: error
