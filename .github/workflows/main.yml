@@ -21,6 +21,13 @@ jobs:
 
       - name: Build FCNPC
         run: cmake --build build --config Release --parallel 4
+        
+      - name: Find built DLLs
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path build -Filter *.dll -Recurse | ForEach-Object {
+            Write-Host $_.FullName
+          }
 
       - name: Upload DLL
         uses: actions/upload-artifact@v4
