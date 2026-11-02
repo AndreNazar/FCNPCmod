@@ -17,7 +17,7 @@ jobs:
           submodules: recursive
 
       - name: Configure CMake
-        run: cmake -S . -B build -A Win32
+        run: cmake -S . -B build -A Win32 -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 
       - name: Build FCNPC
         run: cmake --build build --config Release --parallel 4
