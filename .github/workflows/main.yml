@@ -1,0 +1,30 @@
+name: Build FCNPC Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+        run: cmake -S . -B build -A Win32
+
+      - name: Build FCNPC
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Upload DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: FCNPC-Windows
+          path: build/Release/*.dll
+          if-no-files-found: error
