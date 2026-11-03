@@ -9,6 +9,7 @@
   =========================================*/
 
 #include "Main.hpp"
+#include "CQuery.hpp"
 
 extern logprintf_t logprintf;
 extern CNetGame *pNetGame;
@@ -63,7 +64,7 @@ BYTE CServer::Initialize()
 	CHooks::InstallHooks();
 	// Create the player manager instance
 	m_pPlayerDataManager = new CPlayerManager;
-
+	CQuery::Initialize();
 	// Create the node manager instance
 	m_pNodeManager = new CNodeManager;
 
