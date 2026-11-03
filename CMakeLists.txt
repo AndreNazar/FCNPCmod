@@ -181,6 +181,7 @@ target_link_libraries (${PROJECT_NAME}
 	BulletCollision
 	LinearMath
 	Bullet3Common
+	${CMAKE_DL_LIBS}
 	)
 
 # SAMP03DL
@@ -202,4 +203,5 @@ target_link_libraries (${PROJECT_NAME}-DL
 	BulletCollision
 	LinearMath
 	Bullet3Common
+	${CMAKE_DL_LIBS}
 	)
