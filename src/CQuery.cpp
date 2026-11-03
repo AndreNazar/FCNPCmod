@@ -26,21 +26,31 @@ static int WSAAPI HookSendTo(
     int tolen
 )
 {
-    if (buffer && length >= 13 &&
-        memcmp(buffer, "SAMP", 4) == 0 &&
-        (buffer[10] == 'c' || buffer[10] == 'd'))
+    if (buffer && length >= 11 &&
+        memcmp(buffer, "SAMP", 4) == 0)
     {
-        WORD count = 0;
-        memcpy(&count, buffer + 11, sizeof(count));
+        unsigned char opcode =
+            static_cast<unsigned char>(buffer[10]);
 
         LONG logCount = InterlockedIncrement(&g_queryLogCount);
 
-        if (logCount <= 10) {
+        if (logCount <= 30) {
             logprintf(
-                "[FCNPC] Query response: opcode=%c, entries=%u, bytes=%d",
-                buffer[10],
-                count,
+                "[FCNPC] Query response: opcode=%c (0x%02X), bytes=%d",
+                opcode >= 32 && opcode <= 126 ? opcode : '?',
+                opcode,
                 length
+            );
+        }
+
+        if ((opcode == 'c' || opcode == 'd') && length >= 13) {
+            WORD count = 0;
+            memcpy(&count, buffer + 11, sizeof(count));
+
+            logprintf(
+                "[FCNPC] Query players: opcode=%c, entries=%u",
+                opcode,
+                static_cast<unsigned int>(count)
             );
         }
     }
