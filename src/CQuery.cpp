@@ -1,25 +1,16 @@
 
 #if defined(WIN32)
-
     #include <winsock2.h>
-
 #elif defined(LINUX)
-
     #include <sys/types.h>
     #include <sys/socket.h>
     #include <dlfcn.h>
-
 #else
-
     #error Unsupported platform
-
 #endif
 
 #include "Main.hpp"
 #include "CQuery.hpp"
-
-extern logprintf_t logprintf;
-
 
 #if defined(WIN32)
 
@@ -52,11 +43,7 @@ static SendTo_t g_sendtoOriginal = NULL;
 static void *g_libcHandle = NULL;
 #endif
 
-
-static void AppendUInt32(
-    std::vector<char> &buffer,
-    DWORD value
-)
+static void AppendUInt32(std::vector<char> &buffer, DWORD value)
 {
     buffer.push_back(static_cast<char>(value & 0xFF));
     buffer.push_back(static_cast<char>((value >> 8) & 0xFF));
@@ -84,8 +71,6 @@ static bool AppendNpcEntries(
     if (opcode != 'c' && opcode != 'd')
         return false;
 
-
-
     WORD playerCount =
         static_cast<unsigned char>(packet[11]) |
         (static_cast<WORD>(
@@ -98,7 +83,6 @@ static bool AppendNpcEntries(
     {
         if (opcode == 'c')
         {
-
             if (offset >= packetLength)
                 return false;
 
@@ -117,7 +101,6 @@ static bool AppendNpcEntries(
         }
         else
         {
-
             if (packetLength - offset < 2)
                 return false;
 
@@ -150,12 +133,9 @@ static bool AppendNpcEntries(
     if (!pPlayerManager)
         return false;
 
-
     modified.assign(packet, packet + packetLength);
 
     WORD newCount = playerCount;
-
-
     const size_t MAX_QUERY_PACKET_SIZE = 65507;
 
     for (WORD npcId : pPlayerManager->m_vNpcID)
@@ -165,7 +145,7 @@ static bool AppendNpcEntries(
 
         if (opcode == 'd' && npcId > 255)
             continue;
-        
+
         CPlayerData *pNpc = pPlayerManager->GetAt(npcId);
 
         if (!pNpc)
@@ -183,16 +163,9 @@ static bool AppendNpcEntries(
         if (newCount == 0xFFFF)
             break;
 
-        size_t entrySize;
-
-        if (opcode == 'c')
-        {
-            entrySize = 1 + nameLength + 4;
-        }
-        else
-        {
-            entrySize = 2 + nameLength + 8;
-        }
+        size_t entrySize = opcode == 'c'
+            ? 1 + nameLength + 4
+            : 2 + nameLength + 8;
 
         if (modified.size() > MAX_QUERY_PACKET_SIZE)
             break;
@@ -200,16 +173,11 @@ static bool AppendNpcEntries(
         if (entrySize > MAX_QUERY_PACKET_SIZE - modified.size())
             break;
 
-
         DWORD score = pNetGame->pPlayerPool->dwScore[npcId];
-
-
 
         if (opcode == 'c')
         {
-            modified.push_back(
-                static_cast<char>(nameLength)
-            );
+            modified.push_back(static_cast<char>(nameLength));
 
             modified.insert(
                 modified.end(),
@@ -221,19 +189,15 @@ static bool AppendNpcEntries(
         }
         else
         {
-            modified.push_back(
-                static_cast<char>(npcId)
-            );
-
-            modified.push_back(
-                static_cast<char>(nameLength)
-            );
+            modified.push_back(static_cast<char>(npcId));
+            modified.push_back(static_cast<char>(nameLength));
 
             modified.insert(
                 modified.end(),
                 nickname,
                 nickname + nameLength
             );
+
             AppendUInt32(modified, score);
             AppendUInt32(modified, 0);
         }
@@ -241,7 +205,6 @@ static bool AppendNpcEntries(
         newCount++;
         added++;
     }
-
 
     if (added == 0)
     {
@@ -283,12 +246,6 @@ static int WSAAPI HookSendTo(
         {
             sendBuffer = modified.data();
             sendLength = static_cast<int>(modified.size());
-
-            logprintf(
-                "[FCNPC] Query: added %u NPCs to response '%c'",
-                static_cast<unsigned int>(added),
-                buffer[10]
-            );
         }
     }
 
@@ -301,7 +258,6 @@ static int WSAAPI HookSendTo(
         tolen
     );
 }
-
 
 #elif defined(LINUX)
 
@@ -331,12 +287,6 @@ static ssize_t HookSendTo(
         {
             sendBuffer = modified.data();
             sendLength = modified.size();
-
-            logprintf(
-                "[FCNPC] Query: added %u NPCs to response '%c'",
-                static_cast<unsigned int>(added),
-                static_cast<const char *>(sendBuffer)[10]
-            );
         }
     }
 
@@ -352,8 +302,6 @@ static ssize_t HookSendTo(
 
 #endif
 
-
-
 bool CQuery::Initialize()
 {
     if (g_sendtoHook)
@@ -366,55 +314,29 @@ bool CQuery::Initialize()
     HMODULE hWinsock = GetModuleHandleA("ws2_32.dll");
 
     if (!hWinsock)
-    {
         hWinsock = LoadLibraryA("ws2_32.dll");
-    }
 
     if (!hWinsock)
-    {
-        logprintf("[FCNPC] Query: unable to load ws2_32.dll");
         return false;
-    }
 
     pSendTo = reinterpret_cast<void *>(
         GetProcAddress(hWinsock, "sendto")
     );
 
     if (!pSendTo)
-    {
-        logprintf("[FCNPC] Query: sendto not found");
         return false;
-    }
 
 #elif defined(LINUX)
 
     g_libcHandle = dlopen("libc.so.6", RTLD_NOW | RTLD_LOCAL);
 
     if (!g_libcHandle)
-    {
-        const char *error = dlerror();
-
-        logprintf(
-            "[FCNPC] Query: unable to load libc: %s",
-            error ? error : "unknown error"
-        );
-
         return false;
-    }
 
     pSendTo = dlsym(g_libcHandle, "sendto");
 
     if (!pSendTo)
-    {
-        const char *error = dlerror();
-
-        logprintf(
-            "[FCNPC] Query: sendto not found: %s",
-            error ? error : "unknown error"
-        );
-
         return false;
-    }
 
 #endif
 
@@ -425,11 +347,7 @@ bool CQuery::Initialize()
     );
 
     if (!g_sendtoHook)
-    {
-        logprintf("[FCNPC] Query: subhook creation failed");
         return false;
-    }
-
 
     g_sendtoOriginal = reinterpret_cast<SendTo_t>(
         subhook_get_trampoline(g_sendtoHook)
@@ -437,29 +355,18 @@ bool CQuery::Initialize()
 
     if (!g_sendtoOriginal)
     {
-        logprintf("[FCNPC] Query: trampoline creation failed");
-
         subhook_free(g_sendtoHook);
-
         g_sendtoHook = NULL;
-
         return false;
     }
-
 
     if (subhook_install(g_sendtoHook) != 0)
     {
-        logprintf("[FCNPC] Query: hook installation failed");
-
         subhook_free(g_sendtoHook);
-
         g_sendtoHook = NULL;
         g_sendtoOriginal = NULL;
-
         return false;
     }
-
-    logprintf("[FCNPC] Query: sendto hook installed");
 
     return true;
 }
